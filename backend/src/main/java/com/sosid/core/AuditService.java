@@ -1,5 +1,6 @@
 package com.sosid.core;
 
+import com.sosid.entity.AuditEvent;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;

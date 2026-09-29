@@ -2,11 +2,12 @@ spring:
   application.name: sos-id
   datasource:
     url: ${DATABASE_URL:jdbc:h2:mem:sosid;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE}
-    username: ${DATABASE_USERNAME:postgres}
-    password: ${DATABASE_PASSWORD:gagan@2006vishwa}
+    username: ${DATABASE_USERNAME:sa}
+    password: ${DATABASE_PASSWORD:}
   jpa:
-    hibernate.ddl-auto: create-drop
+    hibernate.ddl-auto: validate
     open-in-view: false
+    show-sql: false
   flyway:
     enabled: true
   data.redis:
@@ -15,4 +16,9 @@ spring:
 server:
   error.include-message: never
   forward-headers-strategy: framework
+sosid:
+  security:
+    jwt-secret: ${JWT_SECRET:change-this-development-secret-to-a-32-byte-minimum-value}
+    access-token-minutes: ${ACCESS_TOKEN_MINUTES:15}
+    refresh-token-days: ${REFRESH_TOKEN_DAYS:30}
 

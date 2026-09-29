@@ -2,8 +2,9 @@ package com.sosid.core;
 
 import com.sosid.common.ApiSupport;
 import com.sosid.common.Secrets;
-import com.sosid.entity.EmergencyProfile;
+import com.sosid.entity.*;
 import com.sosid.entity.enums.DomainEnums;
+import com.sosid.entity.enums.DomainEnums.*;
 import com.sosid.notification.OtpNotifier;
 import com.sosid.storage.S3DocumentStore;
 import org.springframework.beans.factory.annotation.Value;
@@ -63,7 +64,7 @@ class DocumentService {
     }
 
     @Transactional
-    DocumentView register(UUID userId, DocumentInput input, String correlation) {
+    public DocumentView register(UUID userId, DocumentInput input, String correlation) {
         EmergencyProfile p = ownerProfile(userId);
         if (!input.storageReference().startsWith("profiles/" + p.getId() + "/documents/"))
             throw new ApiSupport.InvalidRequestException("storage reference");
@@ -84,7 +85,7 @@ class DocumentService {
         return ownerView(d);
     }
 
-    List<DocumentView> listOwner(UUID userId) {
+    public List<DocumentView> listOwner(UUID userId) {
         EmergencyProfile p = ownerProfile(userId);
         return documents.findByProfileIdAndLifecycleStatus(p.getId(), DocumentLifecycleStatus.ACTIVE).stream().map(this::ownerView).toList();
     }
@@ -94,7 +95,7 @@ class DocumentService {
     }
 
     @Transactional
-    DocumentView update(UUID userId, UUID documentId, DocumentUpdate input, String correlation) {
+    public DocumentView update(UUID userId, UUID documentId, DocumentUpdate input, String correlation) {
         MedicalDocument d = requireOwnerDocument(userId, documentId);
         DocumentAccessPolicy old = d.getAccessPolicy();
         if (input.documentName() != null) d.setDocumentName(input.documentName());
@@ -107,7 +108,7 @@ class DocumentService {
     }
 
     @Transactional
-    void archive(UUID userId, UUID documentId, String correlation) {
+    public void archive(UUID userId, UUID documentId, String correlation) {
         MedicalDocument d = requireOwnerDocument(userId, documentId);
         d.setLifecycleStatus(DocumentLifecycleStatus.ARCHIVED);
         d.setUpdatedAt(Instant.now());
@@ -117,7 +118,7 @@ class DocumentService {
     }
 
     @Transactional
-    void delete(UUID userId, UUID documentId, String correlation) {
+    public void delete(UUID userId, UUID documentId, String correlation) {
         MedicalDocument d = requireOwnerDocument(userId, documentId);
         d.setLifecycleStatus(DocumentLifecycleStatus.DELETED);
         d.setUpdatedAt(Instant.now());
@@ -126,7 +127,7 @@ class DocumentService {
         audit.record("DOCUMENT_DELETED", "SUCCESS", userId, d.getProfileId(), null, null, d.getId(), null, null, correlation);
     }
 
-    List<EmergencyDocumentView> listEmergency(String handle, String correlation) {
+    public List<EmergencyDocumentView> listEmergency(String handle, String correlation) {
         EmergencySession s = emergency.require(handle, correlation);
         List<EmergencyDocumentView> out = documents.findByProfileIdAndLifecycleStatus(s.getProfileId(), DocumentLifecycleStatus.ACTIVE).stream().filter(d -> d.getProcessingStatus() == ProcessingStatus.READY).map(d -> new EmergencyDocumentView(d.getId(), d.getDocumentName(), d.getDocumentType(), d.getAccessPolicy(), d.getAccessPolicy() == DocumentAccessPolicy.PRIVATE)).toList();
         audit.record("DOCUMENTS_LISTED", "SUCCESS", null, s.getProfileId(), s.getQrCredentialId(), s.getId(), null, null, null, correlation);
@@ -134,7 +135,7 @@ class DocumentService {
     }
 
     @Transactional
-    AccessRequestView requestPrivate(String handle, UUID documentId, UUID contactId, String correlation) {
+    public AccessRequestView requestPrivate(String handle, UUID documentId, UUID contactId, String correlation) {
         EmergencySession s = emergency.require(handle, correlation);
         MedicalDocument d = requireEmergencyDocument(s, documentId);
         if (d.getAccessPolicy() != DocumentAccessPolicy.PRIVATE) throw new ApiSupport.ForbiddenException();
@@ -153,7 +154,7 @@ class DocumentService {
     }
 
     @Transactional
-    void issueOtp(String handle, UUID requestId, String correlation) {
+    public void issueOtp(String handle, UUID requestId, String correlation) {
         EmergencySession s = emergency.require(handle, correlation);
         DocumentAccessRequest r = requireRequest(s, requestId);
         if (r.getStatus() != AccessRequestStatus.PENDING || !r.getExpiresAt().isAfter(Instant.now()))
@@ -176,7 +177,7 @@ class DocumentService {
     }
 
     @Transactional
-    AuthorizationView verifyOtp(String handle, UUID requestId, String otp, String correlation) {
+    public AuthorizationView verifyOtp(String handle, UUID requestId, String otp, String correlation) {
         EmergencySession s = emergency.require(handle, correlation);
         DocumentAccessRequest r = requireRequest(s, requestId);
         EmergencyContactOtpChallenge c = challenges.findTopByAccessRequestIdOrderByCreatedAtDesc(r.getId()).orElseThrow(ApiSupport.ForbiddenException::new);
@@ -211,7 +212,7 @@ class DocumentService {
         return new AuthorizationView(a.getId(), a.getExpiresAt());
     }
 
-    String accessUrl(String handle, UUID documentId, String correlation) {
+    public String accessUrl(String handle, UUID documentId, String correlation) {
         EmergencySession s = emergency.require(handle, correlation);
         MedicalDocument d = requireEmergencyDocument(s, documentId);
         if (d.getAccessPolicy() == DocumentAccessPolicy.PRIVATE) {

@@ -2,7 +2,8 @@ package com.sosid.core;
 
 import com.sosid.common.ApiSupport;
 import com.sosid.common.Secrets;
-import com.sosid.entity.EmergencySession;
+import com.sosid.entity.*;
+import com.sosid.entity.enums.DomainEnums.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

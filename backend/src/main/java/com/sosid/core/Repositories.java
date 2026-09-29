@@ -12,6 +12,10 @@ interface UserRepository extends JpaRepository<UserAccount, UUID> {
     Optional<UserAccount> findByEmail(String email);
 }
 
+interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID> {
+    Optional<RefreshToken> findById(UUID id);
+}
+
 interface ProfileRepository extends JpaRepository<EmergencyProfile, UUID> {
     Optional<EmergencyProfile> findByOwnerUserId(UUID ownerUserId);
 }

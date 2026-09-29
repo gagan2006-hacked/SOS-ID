@@ -1,11 +1,15 @@
 package com.sosid.core;
 
 import com.sosid.common.ApiSupport;
+import com.sosid.core.Dto.Credentials;
 import com.sosid.entity.EmergencySession;
 import com.sosid.entity.enums.DomainEnums;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -37,96 +41,107 @@ class ApiController {
     }
 
     @PostMapping("/auth/register")
-    OwnerService.AuthResult register(@Valid @RequestBody Credentials body, HttpServletRequest r) {
+    public OwnerService.AuthResult register(@Valid @RequestBody Credentials body, HttpServletRequest r) {
         return owners.register(body.email(), body.password(), ApiSupport.correlationId(r));
     }
 
     @PostMapping("/auth/login")
-    OwnerService.AuthResult login(@Valid @RequestBody Credentials body, HttpServletRequest r) {
+    public OwnerService.AuthResult login(@Valid @RequestBody Credentials body, HttpServletRequest r) {
         return owners.login(body.email(), body.password(), ApiSupport.correlationId(r));
     }
 
+    @PostMapping("/auth/refresh")
+    public ResponseEntity<OwnerService.AuthResult> refresh(@Valid @RequestBody RefreshRequest body, HttpServletRequest request) {
+        return secure(ResponseEntity.ok(owners.refresh(body.refreshToken(), ApiSupport.correlationId(request))));
+    }
+
+    @PostMapping("/auth/logout")
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshRequest body, HttpServletRequest request) {
+        owners.logout(body.refreshToken(), ApiSupport.correlationId(request));
+        return ResponseEntity.noContent().header(HttpHeaders.CACHE_CONTROL, "no-store").build();
+    }
+
     @GetMapping("/me")
-    Map<String, Object> me() {
+    public Map<String, Object> me() {
         var u = owners.current(ApiSupport.currentUserId());
         return Map.of("email", u.getEmail(), "status", u.getStatus());
     }
 
     @GetMapping("/me/emergency-profile")
-    OwnerService.ProfileView getProfile() {
+    public OwnerService.ProfileView getProfile() {
         return owners.getProfile(ApiSupport.currentUserId());
     }
 
     @PutMapping("/me/emergency-profile")
-    OwnerService.ProfileView putProfile(@RequestBody ProfileRequest body, HttpServletRequest r) {
+    public OwnerService.ProfileView putProfile(@RequestBody ProfileRequest body, HttpServletRequest r) {
         return owners.putProfile(ApiSupport.currentUserId(), body.toInput(), ApiSupport.correlationId(r));
     }
 
     @PatchMapping("/me/emergency-profile")
-    OwnerService.ProfileView patchProfile(@RequestBody ProfileRequest body, HttpServletRequest r) {
+    public OwnerService.ProfileView patchProfile(@RequestBody ProfileRequest body, HttpServletRequest r) {
         return owners.putProfile(ApiSupport.currentUserId(), body.toInput(), ApiSupport.correlationId(r));
     }
 
     @PostMapping("/me/emergency-profile/qr-credentials")
-    OwnerService.QrResult createQr(HttpServletRequest r) {
+    public OwnerService.QrResult createQr(HttpServletRequest r) {
         return owners.createQr(ApiSupport.currentUserId(), ApiSupport.correlationId(r));
     }
 
     @GetMapping("/me/emergency-profile/qr-credentials")
-    List<OwnerService.QrView> qrs() {
+    public List<OwnerService.QrView> qrs() {
         return owners.listQrs(ApiSupport.currentUserId());
     }
 
     @DeleteMapping("/me/emergency-profile/qr-credentials/{id}")
-    ResponseEntity<Void> revokeQr(@PathVariable UUID id, HttpServletRequest r) {
+    public ResponseEntity<Void> revokeQr(@PathVariable UUID id, HttpServletRequest r) {
         owners.revokeQr(ApiSupport.currentUserId(), id, ApiSupport.correlationId(r));
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/me/documents/uploads")
-    DocumentService.UploadTarget upload(@Valid @RequestBody UploadRequest body) {
+    public DocumentService.UploadTarget upload(@Valid @RequestBody UploadRequest body) {
         return documents.uploadTarget(ApiSupport.currentUserId(), body.fileName(), body.contentType());
     }
 
     @PostMapping("/me/documents")
-    DocumentService.DocumentView registerDocument(@Valid @RequestBody DocumentRequest body, HttpServletRequest r) {
+    public DocumentService.DocumentView registerDocument(@Valid @RequestBody DocumentRequest body, HttpServletRequest r) {
         return documents.register(ApiSupport.currentUserId(), new DocumentService.DocumentInput(body.storageReference(), body.documentName(), body.documentType(), body.accessPolicy()), ApiSupport.correlationId(r));
     }
 
     @GetMapping("/me/documents")
-    List<DocumentService.DocumentView> ownerDocuments() {
+    public List<DocumentService.DocumentView> ownerDocuments() {
         return documents.listOwner(ApiSupport.currentUserId());
     }
 
     @GetMapping("/me/documents/{id}")
-    DocumentService.DocumentView ownerDocument(@PathVariable UUID id) {
+    public DocumentService.DocumentView ownerDocument(@PathVariable UUID id) {
         return documents.getOwner(ApiSupport.currentUserId(), id);
     }
 
     @PatchMapping("/me/documents/{id}")
-    DocumentService.DocumentView updateDocument(@PathVariable UUID id, @RequestBody DocumentUpdateRequest body, HttpServletRequest r) {
+    public DocumentService.DocumentView updateDocument(@PathVariable UUID id, @RequestBody DocumentUpdateRequest body, HttpServletRequest r) {
         return documents.update(ApiSupport.currentUserId(), id, new DocumentService.DocumentUpdate(body.documentName(), body.accessPolicy()), ApiSupport.correlationId(r));
     }
 
     @PostMapping("/me/documents/{id}/archive")
-    ResponseEntity<Void> archive(@PathVariable UUID id, HttpServletRequest r) {
+    public ResponseEntity<Void> archive(@PathVariable UUID id, HttpServletRequest r) {
         documents.archive(ApiSupport.currentUserId(), id, ApiSupport.correlationId(r));
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/me/documents/{id}")
-    ResponseEntity<Void> delete(@PathVariable UUID id, HttpServletRequest r) {
+    public ResponseEntity<Void> delete(@PathVariable UUID id, HttpServletRequest r) {
         documents.delete(ApiSupport.currentUserId(), id, ApiSupport.correlationId(r));
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/emergency/sessions")
-    ResponseEntity<EmergencyService.SessionResult> session(@Valid @RequestBody QrSessionRequest body, HttpServletRequest r) {
+    public ResponseEntity<EmergencyService.SessionResult> session(@Valid @RequestBody QrSessionRequest body, HttpServletRequest r) {
         return secure(ResponseEntity.ok(emergency.create(body.qrToken(), ApiSupport.correlationId(r))));
     }
 
     @GetMapping("/emergency/sessions/{handle}")
-    ResponseEntity<OwnerService.EmergencyProfileView> sessionProfile(@PathVariable String handle, HttpServletRequest r) {
+    public ResponseEntity<OwnerService.EmergencyProfileView> sessionProfile(@PathVariable String handle, HttpServletRequest r) {
         String c = ApiSupport.correlationId(r);
         EmergencySession s = emergency.require(handle, c);
         emergency.recordDisclosure(s, c);
@@ -134,39 +149,37 @@ class ApiController {
     }
 
     @PostMapping("/emergency/sessions/{handle}/close")
-    ResponseEntity<Void> close(@PathVariable String handle, HttpServletRequest r) {
+    public ResponseEntity<Void> close(@PathVariable String handle, HttpServletRequest r) {
         emergency.close(handle, ApiSupport.correlationId(r));
         return ResponseEntity.noContent().header(HttpHeaders.CACHE_CONTROL, "no-store").header("Referrer-Policy", "no-referrer").build();
     }
 
     @GetMapping("/emergency/sessions/{handle}/documents")
-    ResponseEntity<List<DocumentService.EmergencyDocumentView>> emergencyDocs(@PathVariable String handle, HttpServletRequest r) {
+    public ResponseEntity<List<DocumentService.EmergencyDocumentView>> emergencyDocs(@PathVariable String handle, HttpServletRequest r) {
         return secure(ResponseEntity.ok(documents.listEmergency(handle, ApiSupport.correlationId(r))));
     }
 
     @PostMapping("/emergency/sessions/{handle}/documents/{documentId}/access-requests")
-    ResponseEntity<DocumentService.AccessRequestView> requestPrivate(@PathVariable String handle, @PathVariable UUID documentId, @Valid @RequestBody ContactRequest body, HttpServletRequest r) {
+    public ResponseEntity<DocumentService.AccessRequestView> requestPrivate(@PathVariable String handle, @PathVariable UUID documentId, @Valid @RequestBody ContactRequest body, HttpServletRequest r) {
         return secure(ResponseEntity.ok(documents.requestPrivate(handle, documentId, body.contactHandle(), ApiSupport.correlationId(r))));
     }
 
     @PostMapping("/emergency/sessions/{handle}/document-access-requests/{requestId}/otp-challenges")
-    ResponseEntity<Void> issueOtp(@PathVariable String handle, @PathVariable UUID requestId, HttpServletRequest r) {
+    public ResponseEntity<Void> issueOtp(@PathVariable String handle, @PathVariable UUID requestId, HttpServletRequest r) {
         documents.issueOtp(handle, requestId, ApiSupport.correlationId(r));
         return ResponseEntity.accepted().header(HttpHeaders.CACHE_CONTROL, "no-store").header("Referrer-Policy", "no-referrer").build();
     }
 
     @PostMapping("/emergency/sessions/{handle}/document-access-requests/{requestId}/otp-verifications")
-    ResponseEntity<DocumentService.AuthorizationView> verifyOtp(@PathVariable String handle, @PathVariable UUID requestId, @Valid @RequestBody OtpRequest body, HttpServletRequest r) {
+    public ResponseEntity<DocumentService.AuthorizationView> verifyOtp(@PathVariable String handle, @PathVariable UUID requestId, @Valid @RequestBody OtpRequest body, HttpServletRequest r) {
         return secure(ResponseEntity.ok(documents.verifyOtp(handle, requestId, body.otp(), ApiSupport.correlationId(r))));
     }
 
     @PostMapping("/emergency/sessions/{handle}/documents/{documentId}/access-url")
-    ResponseEntity<Map<String, String>> accessUrl(@PathVariable String handle, @PathVariable UUID documentId, HttpServletRequest r) {
+    public ResponseEntity<Map<String, String>> accessUrl(@PathVariable String handle, @PathVariable UUID documentId, HttpServletRequest r) {
         return secure(ResponseEntity.ok(Map.of("url", documents.accessUrl(handle, documentId, ApiSupport.correlationId(r)))));
     }
 
-    record Credentials(@Email @NotBlank String email, @NotBlank @Size(min = 12, max = 128) String password) {
-    }
 
     record ProfileRequest(@NotBlank @Size(max = 200) String displayName, LocalDate dateOfBirth,
                           @Size(max = 8) String bloodGroup, @Size(max = 4000) String criticalInstructions,
@@ -196,5 +209,8 @@ class ApiController {
     }
 
     record OtpRequest(@Pattern(regexp = "\\d{6}") String otp) {
+    }
+
+    record RefreshRequest(@NotBlank String refreshToken) {
     }
 }
