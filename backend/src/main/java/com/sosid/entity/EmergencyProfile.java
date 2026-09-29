@@ -1,0 +1,3 @@
+package com.sosid.entity;
+import com.sosid.entity.enums.DomainEnums.ProfileStatus; import jakarta.persistence.*; import lombok.*; import java.time.*; import java.util.UUID;
+@Entity @Table(name="emergency_profiles") @Getter @Setter @NoArgsConstructor public class EmergencyProfile { @Id private UUID id; @Column(name="owner_user_id",nullable=false,unique=true) private UUID ownerUserId; private String displayName; private LocalDate dateOfBirth; private String bloodGroup; private String criticalInstructions; @Enumerated(EnumType.STRING) private ProfileStatus status; private Instant createdAt; private Instant updatedAt; }

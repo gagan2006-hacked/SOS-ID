@@ -1,0 +1,3 @@
+package com.sosid.entity;
+import com.sosid.entity.enums.DomainEnums.*; import jakarta.persistence.*; import lombok.*; import java.time.Instant; import java.util.UUID;
+@Entity @Table(name="medical_documents") @Getter @Setter @NoArgsConstructor public class MedicalDocument { @Id private UUID id; private UUID profileId; private String storageReference; private String documentName; private String documentType; @Enumerated(EnumType.STRING) private DocumentAccessPolicy accessPolicy; @Enumerated(EnumType.STRING) private ProcessingStatus processingStatus; @Enumerated(EnumType.STRING) private DocumentLifecycleStatus lifecycleStatus; private Instant createdAt; private Instant updatedAt; }

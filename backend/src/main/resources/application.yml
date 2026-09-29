@@ -1,0 +1,18 @@
+spring:
+  application.name: sos-id
+  datasource:
+    url: ${DATABASE_URL:jdbc:h2:mem:sosid;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:gagan@2006vishwa}
+  jpa:
+    hibernate.ddl-auto: create-drop
+    open-in-view: false
+  flyway:
+    enabled: true
+  data.redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+server:
+  error.include-message: never
+  forward-headers-strategy: framework
+
