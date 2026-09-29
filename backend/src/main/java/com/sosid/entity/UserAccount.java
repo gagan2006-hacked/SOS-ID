@@ -17,10 +17,12 @@ import java.util.UUID;
 public class UserAccount {
     @Id
     private UUID id;
-    @Column(nullable = false, unique = true)
+    @Column(unique = true)
     private String email;
-    @Column(name = "password_hash", nullable = false)
+    @Column(name = "password_hash")
     private String passwordHash;
+    @Column(name = "phone_number", unique = true)
+    private String phoneNumber;
     @Enumerated(EnumType.STRING)
     private AccountStatus status;
     private Instant createdAt;

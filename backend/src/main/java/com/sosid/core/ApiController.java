@@ -1,7 +1,6 @@
 package com.sosid.core;
 
 import com.sosid.common.ApiSupport;
-import com.sosid.core.Dto.Credentials;
 import com.sosid.entity.EmergencySession;
 import com.sosid.entity.enums.DomainEnums;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,11 +22,13 @@ import java.util.UUID;
 @RequestMapping("/api/v1")
 class ApiController {
     private final OwnerService owners;
+    private final OwnerOtpAuthenticationService ownerOtpAuthentication;
     private final EmergencyService emergency;
     private final DocumentService documents;
 
-    ApiController(OwnerService owners, EmergencyService emergency, DocumentService documents) {
+    ApiController(OwnerService owners, OwnerOtpAuthenticationService ownerOtpAuthentication, EmergencyService emergency, DocumentService documents) {
         this.owners = owners;
+        this.ownerOtpAuthentication = ownerOtpAuthentication;
         this.emergency = emergency;
         this.documents = documents;
     }
@@ -40,14 +41,15 @@ class ApiController {
         return ResponseEntity.status(b.getStatusCode()).headers(b.getHeaders()).header(HttpHeaders.CACHE_CONTROL, "no-store").header("Referrer-Policy", "no-referrer").body(b.getBody());
     }
 
-    @PostMapping("/auth/register")
-    public OwnerService.AuthResult register(@Valid @RequestBody Credentials body, HttpServletRequest r) {
-        return owners.register(body.email(), body.password(), ApiSupport.correlationId(r));
+    @PostMapping("/auth/otp/request")
+    public ResponseEntity<Void> requestOwnerOtp(@Valid @RequestBody OwnerOtpRequest body, HttpServletRequest request) {
+        ownerOtpAuthentication.request(body.phoneNumber(), ApiSupport.correlationId(request));
+        return ResponseEntity.accepted().header(HttpHeaders.CACHE_CONTROL, "no-store").build();
     }
 
-    @PostMapping("/auth/login")
-    public OwnerService.AuthResult login(@Valid @RequestBody Credentials body, HttpServletRequest r) {
-        return owners.login(body.email(), body.password(), ApiSupport.correlationId(r));
+    @PostMapping("/auth/otp/verify")
+    public ResponseEntity<OwnerService.AuthResult> verifyOwnerOtp(@Valid @RequestBody OwnerOtpVerification body, HttpServletRequest request) {
+        return secure(ResponseEntity.ok(ownerOtpAuthentication.verify(body.phoneNumber(), body.otp(), ApiSupport.correlationId(request))));
     }
 
     @PostMapping("/auth/refresh")
@@ -212,5 +214,12 @@ class ApiController {
     }
 
     record RefreshRequest(@NotBlank String refreshToken) {
+    }
+
+    record OwnerOtpRequest(@NotBlank @Pattern(regexp = "^\\+[1-9]\\d{7,14}$") String phoneNumber) {
+    }
+
+    record OwnerOtpVerification(@NotBlank @Pattern(regexp = "^\\+[1-9]\\d{7,14}$") String phoneNumber,
+                                @NotBlank @Pattern(regexp = "\\d{6}") String otp) {
     }
 }

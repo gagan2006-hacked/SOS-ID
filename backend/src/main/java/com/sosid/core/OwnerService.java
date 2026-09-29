@@ -53,7 +53,7 @@ class OwnerService {
         u.setUpdatedAt(now);
         userRepository.save(u);
         auditService.record("ACCOUNT_CREATED", "SUCCESS", u.getId(), null, null, null, null, null, null, correlation);
-        return issueTokens(u);
+        return issueTokensForAuthenticatedUser(u);
     }
 
     public AuthResult login(String email, String password, String correlation) {
@@ -64,7 +64,7 @@ class OwnerService {
         }
         UserAccount u = found.get();
         auditService.record("AUTHENTICATION", "SUCCESS", u.getId(), null, null, null, null, null, null, correlation);
-        return issueTokens(u);
+        return issueTokensForAuthenticatedUser(u);
     }
 
     @Transactional
@@ -75,7 +75,7 @@ class OwnerService {
         stored.setRevokedAt(Instant.now());
         refreshTokenRepository.save(stored);
         auditService.record("REFRESH_TOKEN_ROTATED", "SUCCESS", user.getId(), null, null, null, null, null, null, correlation);
-        return issueTokens(user);
+        return issueTokensForAuthenticatedUser(user);
     }
 
     @Transactional
@@ -84,13 +84,13 @@ class OwnerService {
             RefreshToken stored = requireActiveRefreshToken(refreshToken);
             stored.setRevokedAt(Instant.now());
             refreshTokenRepository.save(stored);
-            auditService.record("REFRESH_TOKEN_REVOKED", "SUCCESS", stored.getUserId(), null, null, null, null, null, null, correlation);
+            auditService.record("OWNER_LOGOUT", "SUCCESS", stored.getUserId(), null, null, null, null, null, null, correlation);
         } catch (ApiSupport.ForbiddenException ignored) {
-            auditService.record("REFRESH_TOKEN_REVOKED", "DENIED", null, null, null, null, null, null, null, correlation);
+            auditService.record("OWNER_LOGOUT", "DENIED", null, null, null, null, null, null, null, correlation);
         }
     }
 
-    private AuthResult issueTokens(UserAccount user) {
+    AuthResult issueTokensForAuthenticatedUser(UserAccount user) {
         String secret = secrets.opaqueToken();
         Instant expiresAt = Instant.now().plus(Duration.ofDays(refreshTokenDays));
         RefreshToken refresh = new RefreshToken();

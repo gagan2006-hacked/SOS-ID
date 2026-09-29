@@ -130,7 +130,7 @@ class DocumentService {
     public List<EmergencyDocumentView> listEmergency(String handle, String correlation) {
         EmergencySession s = emergency.require(handle, correlation);
         List<EmergencyDocumentView> out = documents.findByProfileIdAndLifecycleStatus(s.getProfileId(), DocumentLifecycleStatus.ACTIVE).stream().filter(d -> d.getProcessingStatus() == ProcessingStatus.READY).map(d -> new EmergencyDocumentView(d.getId(), d.getDocumentName(), d.getDocumentType(), d.getAccessPolicy(), d.getAccessPolicy() == DocumentAccessPolicy.PRIVATE)).toList();
-        audit.record("DOCUMENTS_LISTED", "SUCCESS", null, s.getProfileId(), s.getQrCredentialId(), s.getId(), null, null, null, correlation);
+        audit.record("EMERGENCY_DOCUMENT_LISTED", "SUCCESS", null, s.getProfileId(), s.getQrCredentialId(), s.getId(), null, null, null, correlation);
         return out;
     }
 
@@ -149,7 +149,7 @@ class DocumentService {
         r.setCreatedAt(Instant.now());
         r.setExpiresAt(min(s.getExpiresAt(), Instant.now().plus(Duration.ofMinutes(otpMinutes))));
         requests.save(r);
-        audit.record("PRIVATE_DOCUMENT_REQUESTED", "SUCCESS", null, s.getProfileId(), s.getQrCredentialId(), s.getId(), d.getId(), r.getId(), null, correlation);
+        audit.record("PRIVATE_DOCUMENT_ACCESS_REQUESTED", "SUCCESS", null, s.getProfileId(), s.getQrCredentialId(), s.getId(), d.getId(), r.getId(), null, correlation);
         return new AccessRequestView(r.getId(), r.getExpiresAt());
     }
 
@@ -173,7 +173,7 @@ class DocumentService {
         c.setAttemptCount(0);
         challenges.save(c);
         notifier.deliver(contact.getPhoneNumber(), raw);
-        audit.record("OTP_ISSUED", "SUCCESS", null, s.getProfileId(), s.getQrCredentialId(), s.getId(), d.getId(), r.getId(), null, correlation);
+        audit.record("CONTACT_OTP_REQUESTED", "SUCCESS", null, s.getProfileId(), s.getQrCredentialId(), s.getId(), d.getId(), r.getId(), null, correlation);
     }
 
     @Transactional
@@ -182,14 +182,14 @@ class DocumentService {
         DocumentAccessRequest r = requireRequest(s, requestId);
         EmergencyContactOtpChallenge c = challenges.findTopByAccessRequestIdOrderByCreatedAtDesc(r.getId()).orElseThrow(ApiSupport.ForbiddenException::new);
         if (c.getConsumedAt() != null || !c.getExpiresAt().isAfter(Instant.now()) || c.getAttemptCount() >= c.getMaxAttempts() || r.getStatus() != AccessRequestStatus.PENDING) {
-            audit.record("OTP_VERIFIED", "DENIED", null, s.getProfileId(), s.getQrCredentialId(), s.getId(), r.getDocumentId(), r.getId(), null, correlation);
+            audit.record("CONTACT_OTP_VERIFICATION_FAILED", "DENIED", null, s.getProfileId(), s.getQrCredentialId(), s.getId(), r.getDocumentId(), r.getId(), null, correlation);
             throw new ApiSupport.ForbiddenException();
         }
         c.setAttemptCount(c.getAttemptCount() + 1);
         if (!secrets.matches(otp, c.getOtpVerifier())) {
             if (c.getAttemptCount() >= c.getMaxAttempts()) c.setConsumedAt(Instant.now());
             challenges.save(c);
-            audit.record("OTP_VERIFIED", "DENIED", null, s.getProfileId(), s.getQrCredentialId(), s.getId(), r.getDocumentId(), r.getId(), null, correlation);
+            audit.record("CONTACT_OTP_VERIFICATION_FAILED", "DENIED", null, s.getProfileId(), s.getQrCredentialId(), s.getId(), r.getDocumentId(), r.getId(), null, correlation);
             throw new ApiSupport.ForbiddenException();
         }
         MedicalDocument d = requireEmergencyDocument(s, r.getDocumentId());
@@ -208,7 +208,8 @@ class DocumentService {
         a.setIssuedAt(Instant.now());
         a.setExpiresAt(min(s.getExpiresAt(), Instant.now().plus(Duration.ofMinutes(authorizationMinutes))));
         authorizations.save(a);
-        audit.record("TEMPORARY_DOCUMENT_AUTHORIZATION_GRANTED", "SUCCESS", null, s.getProfileId(), s.getQrCredentialId(), s.getId(), d.getId(), r.getId(), a.getId(), correlation);
+        audit.record("CONTACT_OTP_VERIFICATION_SUCCESS", "SUCCESS", null, s.getProfileId(), s.getQrCredentialId(), s.getId(), d.getId(), r.getId(), a.getId(), correlation);
+        audit.record("PRIVATE_DOCUMENT_ACCESS_GRANTED", "SUCCESS", null, s.getProfileId(), s.getQrCredentialId(), s.getId(), d.getId(), r.getId(), a.getId(), correlation);
         return new AuthorizationView(a.getId(), a.getExpiresAt());
     }
 

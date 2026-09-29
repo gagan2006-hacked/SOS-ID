@@ -3,22 +3,16 @@ spring:
   datasource:
     url: ${DATABASE_URL:jdbc:h2:mem:sosid;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE}
     username: ${DATABASE_USERNAME:sa}
-    password: ${DATABASE_PASSWORD:}
+    password: ${DATABASE_PASSWORD}
   jpa:
-    hibernate.ddl-auto: validate
-    open-in-view: false
-    show-sql: false
-  flyway:
-    enabled: true
+    hibernate.ddl-auto: update
+    open-in-view: true
+    show-sql: true
   data.redis:
     host: ${REDIS_HOST:localhost}
     port: ${REDIS_PORT:6379}
 server:
   error.include-message: never
   forward-headers-strategy: framework
-sosid:
-  security:
-    jwt-secret: ${JWT_SECRET:change-this-development-secret-to-a-32-byte-minimum-value}
-    access-token-minutes: ${ACCESS_TOKEN_MINUTES:15}
-    refresh-token-days: ${REFRESH_TOKEN_DAYS:30}
+
 

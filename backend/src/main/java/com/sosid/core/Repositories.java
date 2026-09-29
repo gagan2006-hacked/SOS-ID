@@ -10,6 +10,14 @@ import java.util.UUID;
 
 interface UserRepository extends JpaRepository<UserAccount, UUID> {
     Optional<UserAccount> findByEmail(String email);
+
+    Optional<UserAccount> findByPhoneNumber(String phoneNumber);
+}
+
+interface OwnerOtpChallengeRepository extends JpaRepository<OwnerOtpChallenge, UUID> {
+    Optional<OwnerOtpChallenge> findTopByPhoneNumberOrderByCreatedAtDesc(String phoneNumber);
+
+    long countByPhoneNumberAndCreatedAtAfter(String phoneNumber, java.time.Instant after);
 }
 
 interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID> {
